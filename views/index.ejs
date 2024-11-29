@@ -1,0 +1,250 @@
+<!--
+  Created by: Mai Van Manh
+  Date: 11/02/2020
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Danh sách người dùng</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css    ">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js" integrity="sha512-zoJXRvW2gC8Z0Xo3lBbao5+AS3g6YWr5ztKqaicua11xHo+AvE1b0lT9ODgrHTmNUxeCw0Ry4BGRYZfXu70weg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    .user {
+      display: flex;
+      align-items: center;
+      padding: 12px 24px;
+      cursor: pointer;
+    }
+
+    .user:nth-child(odd) {
+      background-color: #F4F5F7;
+    }
+
+    .user:hover {
+      background-color: #E6EFFF;
+      transition: 0.3s;
+    }
+
+    .avatar {
+      font-weight: bold;
+      font-size: 1.5rem;
+      background-color: deepskyblue;
+      width: 50px;
+      height: 50px;
+      margin-right: 16px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white
+    }
+
+    .user-info {
+      height: 50px;
+      flex-grow: 1;
+    }
+
+    .user-name {
+      font-size: 1.1rem;
+    }
+
+    .user-info .online {
+      font-size: 0.9rem;
+      color: rgb(99, 99, 99)
+    }
+
+    .user .status {
+      width: 90px;
+      text-align: center;
+    }
+
+    .user:hover {
+      background-color: #E6EFFF;
+    }
+
+    .user:hover .avatar {
+      background-color: rgb(7, 142, 204);
+      transition: 0.3s;
+    }
+
+    .user:hover .user-name {
+      font-weight: 450;
+      transition: 0.3s;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-7">
+        <div class="rounded border mt-5 mb-3">
+          <h4 class="text-primary text-center my-5">Danh sách người dùng trực tuyến</h4>
+          <p style="padding: 0 24px">Số người online: <strong class="badge badge-danger badge-pill">5</strong></p>
+          <div id="user-list" class="people">
+            <div class="user">
+              <div class="avatar">C</div>
+              <div class="user-info">
+                <div class="user-name">Phạm Công Chánh</div>
+                <div class="online">Truy cập lúc: 16:45'</div>
+              </div>
+              <div class="status">
+                <div class="badge badge-success badge-pill">Đang rảnh</div>
+              </div>
+            </div>
+
+            <div class="user">
+              <div class="avatar">D</div>
+              <div class="user-info">
+                <div class="user-name">Vũ Đình Duy</div>
+                <div class="online">Truy cập lúc: 16:45'</div>
+              </div>
+              <div class="status">
+                <div class="badge badge-success badge-pill">Đang rảnh</div>
+              </div>
+
+            </div>
+
+            <div class="user">
+              <div class="avatar">K</div>
+              <div class="user-info">
+                <div class="user-name">Trần Vũ Khoa</div>
+                <div class="online">Truy cập lúc: 16:45'</div>
+              </div>
+              <div class="status">
+                <div class="badge badge-warning badge-pill">Đang bận</div>
+              </div>
+            </div>
+
+            <div class="user">
+              <div class="avatar">P</div>
+              <div class="user-info">
+                <div class="user-name">Quách Phạm</div>
+                <div class="online">Truy cập lúc: 16:45'</div>
+              </div>
+              <div class="status">
+                <div class="badge badge-success badge-pill">Đang rảnh</div>
+              </div>
+            </div>
+
+            <div class="user">
+              <div class="avatar">K</div>
+              <div class="user-info">
+                <div class="user-name">Lê Duy Khang</div>
+                <div class="online">Truy cập lúc: 16:45'</div>
+              </div>
+              <div class="status">
+                <div class="badge badge-warning badge-pill">Đang bận</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="small">Danh sách này cần được cập nhật tự động mỗi khi có người dùng đăng nhập hoặc đăng xuất/thoát.
+          Ngoài ra trạng thái của mỗi người dùng cũng cần được cập nhật mỗi khi họ tham gia hoặc rời một cuộc trò
+          chuyện.</p>
+        <p class="small">Để cho đơn giản, trang web chỉ cần hỗ trợ với mỗi người vào một thời điểm, không thể chat với người có trạng thái là <strong>đang bận</strong>.</p>
+      </div>
+    </div>
+
+    <div id="online-notification" class="alert alert-success d-inline position-fixed small" style="bottom: 20px; left: 20px">
+      <strong>Trần Quang Trí</strong> vừa mới online
+    </div>
+    <div id="offline-notification" class="alert alert-danger d-inline position-fixed small" style="bottom: 20px; right: 20px">
+      <strong>Trần Quang Trí</strong> đã thoát khỏi ứng dụng
+    </div>
+
+
+    <script>
+      let socket;
+      let onlineUsers = [];
+      let username;
+
+      window.onload = () => {
+        console.log("Mở kết nối tới server")
+
+        socket = io()
+        socket.on('connect', () => handleConnectionSuccess())
+        socket.on('disconnect', () => console.log("Đã ngắt kết nối tới server"))
+        socket.on('list-users', handleUserList)
+        socket.on('new-user', handleNewUser)
+        socket.on('user-leave', handleUserLeave)
+        socket.on('register-name', handleRegisteringUsername)
+      }
+
+      function handleRegisteringUsername(data){
+        let {id, username} = data
+        let user = onlineUsers.find(u => u.id == id)
+        if (!user){
+          return console.log("Không tìm thấy user")
+        }
+
+        user.username = username
+        console.log(`Client ${id} đã đăng ký tên là ${username}`)
+      }
+
+      function handleConnectionSuccess(){
+        console.log("OK")
+        console.log("Connected with id: ", socket.id)
+        if (!username)
+          username = prompt("Nhập tên của bạn")
+
+        socket.emit('register-name', username)
+      }
+
+      function handleUserList(users) {
+        console.log("Đã nhận danh sách từ server");
+
+        if (Array.isArray(users)) {
+          users.forEach(element => {
+            console.log(element);
+            if (element.id !== socket.id){
+              onlineUsers.push(element);
+            }
+          });
+        } else {
+          console.error("Dữ liệu không đúng định dạng.");
+        }
+      }
+
+      function handleNewUser(user){
+        console.log("Có người mới đăng nhập: ", user);
+        onlineUsers.push(user);
+      }
+
+      function handleUserLeave(user){
+        console.log("Có người mới thoát: ", user);
+        onlineUsers = onlineUsers.filter(u => u.id !== user.id);
+      }
+
+      function displayUser(user){
+        let status =
+        let userDiv = $(`
+          <div id="${user.id}" class="user">
+            <div class="avatar">K</div>
+            <div class="user-info">
+              <div class="user-name">${user.username[0]}</div>
+              <div class="online">Truy cập lúc: ${user.loginAt}'</div>
+            </div>
+            <div class="status">
+              <div class="badge badge-warning badge-pill">${user.status}</div>
+            </div>
+          </div>`)
+        $('#user-list').append(userDiv)
+      }
+
+
+    </script>
+</body>
+
+</html>
