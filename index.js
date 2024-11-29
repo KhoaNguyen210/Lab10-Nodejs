@@ -6,11 +6,15 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const session = require('express-session');
 const app = express();
 
+const callbackUrl = process.env.NODE_ENV === 'production'
+  ? 'https://lab10-nodejs.onrender.com/auth/google/callback'
+  : 'http://localhost:3000/auth/google/callback';
+
 // Passport session setup
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL,
+    callbackURL: callbackUrl,
   },
   (accessToken, refreshToken, profile, done) => {
     // Kiểm tra email người dùng
