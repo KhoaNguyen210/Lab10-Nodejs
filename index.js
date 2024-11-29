@@ -13,9 +13,20 @@ passport.use(new GoogleStrategy({
     callbackURL: process.env.GOOGLE_CALLBACK_URL,
   },
   (accessToken, refreshToken, profile, done) => {
-    return done(null, profile); // Save profile data to the session
+    // Kiểm tra email người dùng
+    const userEmail = profile.emails[0].value;
+
+    // Kiểm tra xem email có phải là @student.tdtu.edu.vn không
+    if (!userEmail.endsWith('@student.tdtu.edu.vn')) {
+      return done(null, false, { message: 'Email phải là @student.tdtu.edu.vn để đăng nhập.' });
+    }
+
+    // Nếu email hợp lệ, trả về profile
+    return done(null, profile);
   }
 ));
+
+
 
 passport.serializeUser((user, done) => {
   done(null, user);
@@ -38,8 +49,11 @@ app.get('/', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
-    res.render('login');
+    // Kiểm tra nếu có thông báo lỗi (chỉ khi không có email hợp lệ)
+    const errorMessage = req.query.error || null; // Lấy thông báo lỗi từ query string (nếu có)
+    res.render('login', { errorMessage });
 });
+
 
 app.get('/chat', (req, res) => {
     res.render('chat');
@@ -52,10 +66,23 @@ app.get('/auth/google', passport.authenticate('google', {
 app.get('/auth/google/callback',
     passport.authenticate('google', { failureRedirect: '/login' }),
     (req, res) => {
-        // Successful authentication, redirect to chat page.
-        res.redirect('/chat');
+      // Kiểm tra nếu không có lỗi và email hợp lệ
+      if (req.user && !req.user.emails[0].value.endsWith('@student.tdtu.edu.vn')) {
+        return res.render('login', { errorMessage: 'Email phải là @student.tdtu.edu.vn để đăng nhập.' });
+      }
+      res.redirect('/chat'); // Nếu thành công, chuyển hướng đến chat page
     }
-);
+  );
+  
+
+// Xử lý lỗi khi email không hợp lệ
+app.use((err, req, res, next) => {
+    if (err && err.message === 'Chỉ cho phép đăng nhập bằng email @student.tdtu.edu.vn') {
+        res.render('login', { errorMessage: 'Chỉ cho phép đăng nhập bằng email @student.tdtu.edu.vn' });
+    } else {
+        next(err);
+    }
+});
 
 app.get('/logout', (req, res) => {
     req.logout((err) => {
