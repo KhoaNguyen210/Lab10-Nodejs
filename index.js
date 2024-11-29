@@ -26,8 +26,6 @@ passport.use(new GoogleStrategy({
   }
 ));
 
-
-
 passport.serializeUser((user, done) => {
   done(null, user);
 });
@@ -54,8 +52,8 @@ app.get('/login', (req, res) => {
     res.render('login', { errorMessage });
 });
 
-
 app.get('/chat', (req, res) => {
+    // Bỏ kiểm tra đăng nhập, cho phép truy cập vào chat
     res.render('chat');
 });
 
@@ -72,8 +70,7 @@ app.get('/auth/google/callback',
       }
       res.redirect('/chat'); // Nếu thành công, chuyển hướng đến chat page
     }
-  );
-  
+);
 
 // Xử lý lỗi khi email không hợp lệ
 app.use((err, req, res, next) => {
@@ -112,11 +109,25 @@ io.on('connection', client => {
     // Khi người dùng đăng ký tên
     client.on('register-name', username => {
         client.username = username;
-        users.push({ id: client.id, username: username, status: 'rảnh', loginAt: new Date().toLocaleTimeString() });
-        io.emit('new-user', { id: client.id, username: username, status: 'rảnh', loginAt: new Date().toLocaleTimeString() });
-        
+        users.push({ id: client.id, username: username, status: 'Đang rảnh', loginAt: new Date().toLocaleTimeString() });
+        io.emit('new-user', { id: client.id, username: username, status: 'Đang rảnh', loginAt: new Date().toLocaleTimeString() });
+
+        // Phát sóng thông báo "vừa mới online"
+        io.emit('show-online-notification', { username: username, action: 'online' });
+
         // Cập nhật số người online
         io.emit('update-online-count', users.length);
+    });
+
+    // Khi người dùng vào trang chat
+    client.on('enter-chat', () => {
+        // Cập nhật trạng thái của người dùng thành "Đang bận"
+        const user = users.find(u => u.id === client.id);
+        if (user) {
+            user.status = 'Đang bận';
+            io.emit('update-user-status', { id: client.id, status: 'Đang bận' });
+            client.emit('user-info', { username: user.username, status: 'Đang bận' });
+        }
     });
 
     // Khi người dùng ngắt kết nối
@@ -130,15 +141,29 @@ io.on('connection', client => {
         if (userIndex !== -1) {
             const username = users[userIndex].username;
 
+            // Cập nhật trạng thái người dùng thành "Đang bận" khi họ thoát
+            users[userIndex].status = 'Đang bận';
+            io.emit('update-user-status', { username, status: 'Đang bận' });
+
+            // Phát sóng thông báo "đã thoát khỏi ứng dụng"
+            io.emit('show-online-notification', { username: username, action: 'offline' });
+            
             // Xóa người dùng khỏi danh sách
             users = users.filter(user => user.id !== client.id);
 
             // Gửi thông báo thoát với tên người dùng
             io.emit('user-leave', { username: username, id: client.id });
-            
+
             // Cập nhật số người online
             io.emit('update-online-count', users.length);
         }
     });
-
+    // Lắng nghe sự kiện khi người dùng thay đổi trạng thái
+    client.on('change-status', (status) => {
+        const user = users.find(u => u.id === client.id);
+        if (user) {
+            user.status = status;
+            io.emit('update-user-status', { id: client.id, status: status });
+        }
+    });
 });

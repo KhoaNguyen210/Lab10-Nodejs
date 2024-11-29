@@ -56,7 +56,6 @@
 
     .user-name {
       font-size: 1.1rem;
-
     }
 
     .user-info .online {
@@ -89,7 +88,7 @@
       height: 75vh;
       overflow: auto;
     }
-    
+
     .message {
       border-radius: 8px;
       padding: 12px;
@@ -165,7 +164,7 @@
       border: none;
       outline: none;
       transition: 0.3s;
-    } 
+    }
 
     .message-input a{
       text-decoration: none;
@@ -200,11 +199,12 @@
     <div class="row justify-content-center">
       <div class="col-md-9">
         <div class="rounded border mt-3 mb-3">
-          <div class="user">
-            <div class="avatar">C</div>
+          <!-- User Info -->
+          <div class="user" id="user-info">
+            <div class="avatar" id="user-avatar">C</div>
             <div class="user-info">
-              <div class="user-name">Phạm Công Chánh</div>
-              <div class="online">Vừa mới truy cập</div>
+              <div class="user-name" id="user-name"></div>
+              <div class="online" id="user-status"></div>
             </div>
             <div class="actions">
               <i class="fas fa-phone-alt"></i>
@@ -212,52 +212,90 @@
               <i class="fas fa-search"></i>
             </div>
           </div>
-          <div class="conversation">
-              <div class="message my-message">Ra quân chiến dịch Xuân tình nguyện năm 2021
-                <span class="time">08:59</span>
-              </div>
-              <div class="message my-message">Sáng ngày 28/01/2021, Hội sinh viên Trường Đại học Tôn Đức Thắng (TDTU) đã tổ chức lễ ra quân chiến dịch Xuân tình nguyện TDTU năm 2021.
-                <span class="time">08:59</span>
-              </div>
-              <div class="img-message my-message">
-                <img src="https://tdtu.edu.vn/sites/www/files/articles/2021/Jan/Xuan-tinh-nguyen/xuan_tinh_nguyen_2.jpg">
-              </div>
-              <div class="message their-message">OK! Rất rốt
-                <span class="time">08:59</span>
-              </div>
-              <div class="message their-message">Mình cũng sẽ đăng ký tham gia
-                <span class="time">08:59</span>
-              </div>
-              <div class="message their-message">Theo kế hoạch, chiến dịch diễn ra từ ngày 28/01 đến ngày 06/02/2021, huy động khoảng 1.250 chiến sĩ với 2 mặt trận cấp trường và cấp cơ sở.
-                <span class="time">08:59</span>
-              </div>
-              <div class="message my-message">Đây là hoạt động truyền thống của Hội sinh viên TDTU trong suốt 13 năm qua.
-                <span class="time">08:59</span>
-              </div>
-              <div class="message my-message">Chúc mọi người năm mới vui vẻ
-                <span class="time">08:59</span>
-              </div>
-              <div class="message their-message">Cám ơn mọi người
-                <span class="time">08:59</span>
-              </div>
-              <div class="message their-message">Mình cũng chúc mọi người năm mới phát tài
-                <span class="time">08:59</span>
-              </div>
-              <div class="img-message their-message">
-                <img src="https://media.truyenhinhdulich.vn/upload/news/2300_binh_phuoc_khai_mac_duong_hoa_xuan_tet_ky_hoi.jpg">
-              </div>
+
+          <!-- Conversation Area -->
+          <div class="conversation" id="conversation">
+              <!-- Tin nhắn sẽ được hiển thị ở đây -->
           </div>
+
+          <!-- Message Input Area -->
           <div class="message-input">
-            <div class="typing">Phạm Công Chánh đang soạn tin...</div>
-            <input type="text" placeholder="Nhập tin nhắn">
-            <a href="#">Gửi</a>
+            <div class="typing" id="typing-indicator">Phạm Công Chánh đang soạn tin...</div>
+            <input type="text" id="message-input" placeholder="Nhập tin nhắn">
+            <a href="#" id="send-button">Gửi</a>
           </div>
         </div>
-     
       </div>
     </div>
+  </div>
 
-  
+  <script src="/socket.io/socket.io.js"></script>
+
+  <script>
+    const socket = io();
+    let username = "";  // Tên người dùng được cập nhật từ server
+    let status = "Đang rảnh";  // Trạng thái mặc định
+
+    // Lắng nghe khi người dùng đã đăng nhập và chuyển trạng thái vào chat
+    socket.on('user-info', (data) => {
+      username = data.username;
+      status = data.status;
+      updateUserInfo(username, status);
+    });
+
+    // Cập nhật thông tin người dùng
+    function updateUserInfo(name, status) {
+      document.getElementById('user-name').innerText = name;
+      document.getElementById('user-status').innerText = status;
+      document.getElementById('user-status').className = status === 'Đang bận' ? 'busy' : 'online';
+      document.getElementById('user-avatar').innerText = name.charAt(0); // Hiển thị chữ cái đầu tiên của tên
+    }
+
+    // Lắng nghe khi người dùng đang soạn tin
+    socket.on('typing', (data) => {
+        if (data.username !== username) {
+            $('#typing-indicator').text(`${data.username} đang soạn tin...`);
+        }
+    });
+
+    // Lắng nghe khi nhận được tin nhắn
+    socket.on('receive-message', (data) => {
+        const { username, message } = data;
+        const messageElement = `<div class="message ${username === "Phạm Công Chánh" ? 'my-message' : 'their-message'}">
+            <span class="message-username">${username}</span>: ${message}
+        </div>`;
+        $('#conversation').append(messageElement);
+        $('#conversation').scrollTop($('#conversation')[0].scrollHeight); // Cuộn xuống cuối
+    });
+
+    // Gửi tin nhắn
+    $('#send-button').click(function() {
+        sendMessage();
+    });
+
+    // Gửi tin nhắn khi nhấn Enter
+    $('#message-input').keypress(function(event) {
+        if (event.which === 13) {  // Kiểm tra phím Enter
+            sendMessage();
+        }
+    });
+
+    function sendMessage() {
+        const message = $('#message-input').val();
+        if (message) {
+            socket.emit('send-message', { username: username, message: message });
+            $('#message-input').val('');  // Xóa nội dung ô nhập
+        }
+    }
+
+    // Gửi thông tin người dùng đang soạn tin
+    $('#message-input').on('input', function() {
+        socket.emit('typing', { username: username });
+    });
+
+    // Cập nhật trạng thái "Đang bận" khi người dùng vào chat
+    socket.emit('change-status', { username: username, status: 'Đang bận' });
+  </script>
 </body>
 
 </html>
