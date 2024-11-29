@@ -91,63 +91,10 @@
       <div class="col-md-7">
         <div class="rounded border mt-5 mb-3">
           <h4 class="text-primary text-center my-5">Danh sách người dùng trực tuyến</h4>
-          <p style="padding: 0 24px">Số người online: <strong class="badge badge-danger badge-pill">5</strong></p>
+          <p style="padding: 0 24px">Số người online: <strong id="online-count" class="badge badge-danger badge-pill">0</strong></p>
           <div id="user-list" class="people">
-            <div class="user">
-              <div class="avatar">C</div>
-              <div class="user-info">
-                <div class="user-name">Phạm Công Chánh</div>
-                <div class="online">Truy cập lúc: 16:45'</div>
-              </div>
-              <div class="status">
-                <div class="badge badge-success badge-pill">Đang rảnh</div>
-              </div>
-            </div>
-
-            <div class="user">
-              <div class="avatar">D</div>
-              <div class="user-info">
-                <div class="user-name">Vũ Đình Duy</div>
-                <div class="online">Truy cập lúc: 16:45'</div>
-              </div>
-              <div class="status">
-                <div class="badge badge-success badge-pill">Đang rảnh</div>
-              </div>
-
-            </div>
-
-            <div class="user">
-              <div class="avatar">K</div>
-              <div class="user-info">
-                <div class="user-name">Trần Vũ Khoa</div>
-                <div class="online">Truy cập lúc: 16:45'</div>
-              </div>
-              <div class="status">
-                <div class="badge badge-warning badge-pill">Đang bận</div>
-              </div>
-            </div>
-
-            <div class="user">
-              <div class="avatar">P</div>
-              <div class="user-info">
-                <div class="user-name">Quách Phạm</div>
-                <div class="online">Truy cập lúc: 16:45'</div>
-              </div>
-              <div class="status">
-                <div class="badge badge-success badge-pill">Đang rảnh</div>
-              </div>
-            </div>
-
-            <div class="user">
-              <div class="avatar">K</div>
-              <div class="user-info">
-                <div class="user-name">Lê Duy Khang</div>
-                <div class="online">Truy cập lúc: 16:45'</div>
-              </div>
-              <div class="status">
-                <div class="badge badge-warning badge-pill">Đang bận</div>
-              </div>
-            </div>
+            <!-- Người dùng sẽ được thêm vào đây từ JavaScript -->
+          </div>
           </div>
         </div>
         <p class="small">Danh sách này cần được cập nhật tự động mỗi khi có người dùng đăng nhập hoặc đăng xuất/thoát.
@@ -157,11 +104,14 @@
       </div>
     </div>
 
-    <div id="online-notification" class="alert alert-success d-inline position-fixed small" style="bottom: 20px; left: 20px">
-      <strong>Trần Quang Trí</strong> vừa mới online
+    <!-- Thông báo người dùng online -->
+    <div id="online-notification" class="alert alert-success d-inline position-fixed small" style="bottom: 20px; left: 20px; display: none;">
+      <!-- Thông báo sẽ được cập nhật và hiển thị ở đây -->
     </div>
-    <div id="offline-notification" class="alert alert-danger d-inline position-fixed small" style="bottom: 20px; right: 20px">
-      <strong>Trần Quang Trí</strong> đã thoát khỏi ứng dụng
+
+    <!-- Thông báo người dùng offline -->
+    <div id="offline-notification" class="alert alert-danger d-inline position-fixed small" style="bottom: 20px; right: 20px; display: none;">
+      <!-- Thông báo sẽ được cập nhật và hiển thị ở đây -->
     </div>
 
 
@@ -171,80 +121,101 @@
       let username;
 
       window.onload = () => {
-        console.log("Mở kết nối tới server")
-
-        socket = io()
-        socket.on('connect', () => handleConnectionSuccess())
-        socket.on('disconnect', () => console.log("Đã ngắt kết nối tới server"))
-        socket.on('list-users', handleUserList)
-        socket.on('new-user', handleNewUser)
-        socket.on('user-leave', handleUserLeave)
-        socket.on('register-name', handleRegisteringUsername)
+          console.log("Mở kết nối tới server");
+          socket = io();
+          socket.on('connect', () => handleConnectionSuccess());
+          socket.on('disconnect', () => console.log("Đã ngắt kết nối tới server"));
+          socket.on('list-users', handleUserList);
+          socket.on('new-user', handleNewUser);
+          socket.on('user-leave', handleUserLeave);
+          socket.on('update-online-count', updateOnlineCount);
+          socket.on('register-name', handleRegisteringUsername);
       }
 
-      function handleRegisteringUsername(data){
-        let {id, username} = data
-        let user = onlineUsers.find(u => u.id == id)
-        if (!user){
-          return console.log("Không tìm thấy user")
-        }
-
-        user.username = username
-        console.log(`Client ${id} đã đăng ký tên là ${username}`)
+      function handleRegisteringUsername(data) {
+          let { id, username } = data;
+          let user = onlineUsers.find(u => u.id == id);
+          if (!user) {
+              return console.log("Không tìm thấy user");
+          }
+          user.username = username;
+          console.log(`Client ${id} đã đăng ký tên là ${username}`);
       }
 
-      function handleConnectionSuccess(){
-        console.log("OK")
-        console.log("Connected with id: ", socket.id)
-        if (!username)
-          username = prompt("Nhập tên của bạn")
+      function handleConnectionSuccess() {
+          console.log("OK");
+          console.log("Connected with id: ", socket.id);
+          if (!username)
+              username = prompt("Nhập tên của bạn");
 
-        socket.emit('register-name', username)
+          socket.emit('register-name', username);
       }
 
       function handleUserList(users) {
-        console.log("Đã nhận danh sách từ server");
-
-        if (Array.isArray(users)) {
-          users.forEach(element => {
-            console.log(element);
-            if (element.id !== socket.id){
-              onlineUsers.push(element);
-            }
-          });
-        } else {
-          console.error("Dữ liệu không đúng định dạng.");
-        }
+          console.log("Đã nhận danh sách từ server");
+          if (Array.isArray(users)) {
+              users.forEach(element => {
+                  if (element.id !== socket.id) {
+                      onlineUsers.push(element);
+                      displayUser(element); // Hiển thị người dùng trong danh sách
+                  }
+              });
+          } else {
+              console.error("Dữ liệu không đúng định dạng.");
+          }
       }
 
-      function handleNewUser(user){
-        console.log("Có người mới đăng nhập: ", user);
-        onlineUsers.push(user);
+      function handleNewUser(user) {
+          console.log("Có người mới đăng nhập: ", user);
+          onlineUsers.push(user);
+          displayUser(user); // Thêm người dùng mới vào danh sách
+          showNotification(user.username + ' vừa mới online', 'online');
       }
 
-      function handleUserLeave(user){
-        console.log("Có người mới thoát: ", user);
-        onlineUsers = onlineUsers.filter(u => u.id !== user.id);
+      function handleUserLeave(user) {
+          console.log("Có người mới thoát: ", user);
+          onlineUsers = onlineUsers.filter(u => u.id !== user.id);
+          $(`#${user.id}`).remove(); // Xóa người dùng ra khỏi giao diện
+          showNotification(user.username + ' đã thoát khỏi ứng dụng', 'offline');
       }
 
-      function displayUser(user){
-        let status =
-        let userDiv = $(`
-          <div id="${user.id}" class="user">
-            <div class="avatar">K</div>
-            <div class="user-info">
-              <div class="user-name">${user.username[0]}</div>
-              <div class="online">Truy cập lúc: ${user.loginAt}'</div>
-            </div>
-            <div class="status">
-              <div class="badge badge-warning badge-pill">${user.status}</div>
-            </div>
-          </div>`)
-        $('#user-list').append(userDiv)
+      function updateOnlineCount(count) {
+          $('#online-count').text(count); // Cập nhật số người online
+          // Ẩn thông báo nếu không có ai online
+          if (count === 0) {
+              $('#online-notification').hide();
+              $('#offline-notification').hide();
+          }
       }
 
+      function showNotification(message, type) {
+          const notification = type === 'online' ? $('#online-notification') : $('#offline-notification');
+          notification.text(message).show();
+          
+          // Tự động ẩn thông báo sau 3 giây
+          setTimeout(() => {
+              notification.fadeOut();
+          }, 3000);
+      }
 
+      function displayUser(user) {
+          let status = user.status === 'bussy' ? '<div class="badge badge-warning badge-pill">Đang bận</div>' : '<div class="badge badge-success badge-pill">Đang rảnh</div>';
+          let userDiv = $(` 
+              <div id="${user.id}" class="user">
+                  <div class="avatar">${user.username[0]}</div>
+                  <div class="user-info">
+                      <div class="user-name">${user.username}</div>
+                      <div class="online">Truy cập lúc: ${user.loginAt}</div>
+                  </div>
+                  <div class="status">
+                      ${status}
+                  </div>
+              </div>`);
+          $('#user-list').append(userDiv); // Thêm người dùng vào danh sách
+      }
     </script>
+
+
 </body>
 
 </html>
